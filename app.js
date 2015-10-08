@@ -1,27 +1,56 @@
-// Include Express
 var express = require('express');
-// Use cluster
-var cluster = require('cluster');
+var path = require('path');
+var logger = require('morgan');
+var bodyParser = require('body-parser');
 
-if( cluster.isMaster ){
+/**
+ * Allow require with namespacing from application path
+ * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+ * @param  {String} name The path of the require from the app root directory (much like NS)
+ * @return {mixed}
+ */
+global.app_require = function(name){
+	return require(__dirname + '/' + name);
+};
 
- 	// Count the machine's CPUs
-    var cpuCount = require('os').cpus().length;
+var routes = require('./routes/index');
+var crud = require('./routes/crud');
 
-    while(cpuCount--){
-    	cluster.fork();
-    }
+var app = express();
 
-	cluster.on('exit', function (worker) {
-	    // Replace the dead worker,
-	    // we're not sentimental
-	    console.log('Worker %d died :(', worker.id);
-	    cluster.fork();
+// uncomment after placing your favicon in /public
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+app.use('/', routes);
+app.use('/companies', crud);
+app.use('/users', crud);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+	var err = new Error('Undefined API endpoint');
+	err.status = 404;
+	next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+
+app.use(function(err, req, res, next) {
+	res.status(err.status || 500);
+	res.json({
+		type:'error',
+		errors: [
+			{
+				message: err.message,
+				error: app.get('env') === 'development' ? err : {}
+			}
+		]
 	});
+});
 
-}else{
 
-	// Create a new Express application
-	var app = express();
-
-}
+module.exports = app;
