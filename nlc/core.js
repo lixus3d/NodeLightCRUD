@@ -1,3 +1,6 @@
+var _ = require('lodash');
+var modelList = app_require('models');
+var AbstractCollection = app_require('nlc/abstract/collection');
 
 var Core = function(){
 
@@ -11,23 +14,26 @@ var Core = function(){
 	 * @return string The Model name
 	 */
 	this.getModelType = function(req){
-		return req.baseUrl.substr(1);
+		var modelTypePlural = req.baseUrl.substr(1);
+		return this.convertPlural(modelTypePlural);
 	};
 
-	/**
-	 * Build a json response from the request and an additionnal json object
-	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
-	 * @param  {Request} req    Express request object instance
-	 * @param  {Object} jsonAdd Additionnal key values to add to the json response
-	 * @return {Object}         The response object
-	 */
-	this.buildApiResponseObject = function(req, jsonAdd){
-		return _.merge({
+	this.convertPlural = function(modelTypePlural){
+		if(modelList[modelTypePlural]!==undefined){
+			return modelList[modelTypePlural];
+		}
+		throw 'Invalid modelTypePlural given';
+	};
+
+	this.buildApiResponse = function(req, type, responseContent){
+		var apiResponse = {
 			request: {
-				type: 'undefined',
+				type: type,
 				params: req.params,
-			}
-		},jsonAdd);
+			},
+			response: this.buildResponseObject(responseContent)
+		};
+		return apiResponse;
 	};
 
 	/**
@@ -36,11 +42,31 @@ var Core = function(){
 	 * @param  {mixed} responseReturn A return
 	 * @return {Object}
 	 */
-	this.buildResponseObject = function(response){
+	this.buildResponseObject = function(responseContent){
 		switch(true){
 			// TODO : Might create a interface for response, that implements a exportForAPI() , building the complete response object
-			case response instanceof NLC.Collection:
-				var collection = response;
+
+			case responseContent instanceof AbstractCollection:
+				var collection = responseContent;
+				return {
+					type: 'collection',
+					params: {
+						type: collection.getName(),
+						length: collection.getLength(),
+						offset: collection.getOffset(),
+						total: collection.getTotal()
+					},
+					collection: responseContent.export()
+				};
+			case responseContent instanceof Object:
+				return {
+					type: 'model',
+					model: responseContent
+				};
+			/*
+			case responseContent instanceof NLC.Collection:
+
+				var collection = responseContent;
 				return {
 					type: 'collection',
 					// TODO : Might replace with a collection.exportParams()
@@ -52,64 +78,27 @@ var Core = function(){
 					},
 					collection: collection.export()
 				};
-			case response instanceof NLC.Model:
-				var model = response;
+
+			case responseContent instanceof NLC.Model:
+				var model = responseContent;
 				return {
 					type: 'model',
 					params: {
-						model: model.getName(),
+						type: model.getName(),
 						complete: model.isComplete()
 					},
 					model: model.export()
 				};
-			case response instanceof String:
+			*/
+			case typeof responseContent === 'string':
 				return {
 					type: 'string',
-					string: response
+					string: responseContent
 				};
 		}
-		return convertResponseToObject(response);
-	};
-
-
-	// NOTE : NOT USED , just thinked
-	this.buildResponseObject = function(type, infos){
-		var response;
-
-		// TODO : Determine the reponse aspect from the given reponse content instance
-		// TODO : swith to instanciable response object
-		switch(type){
-			case 'collection':
-				response = {
-					type: type,
-					params: {
-						model: infos.model,
-						length: infos.collection.length,
-						offset: infos.offset,
-						total: infos.total
-					},
-					collection: infos.collection
-				};
-				break;
-			case 'empty':
-				response = {
-					type: type,
-				};
-				break;
-			case 'model':
-				response = {
-					type: type,
-					params: infos.params,
-					model: infos.model
-				};
-				break;
-			default:
-				throw 'Invalid response object type';
-		}
-
-		return response;
+		return {};
 	};
 
 };
 
-modules.exports = new Core();
+module.exports = new Core();

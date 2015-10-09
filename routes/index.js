@@ -1,16 +1,10 @@
 var express = require('express');
+var core = app_require('nlc/core');
 var router = express.Router();
 
 // API Ping
 router.all('/', function(req, res, next) {
-	res.json({
-		request: {
-			type:'ping'
-		},
-		response: {
-			content: 'pong'
-		}
-	});
+	res.json( core.buildApiResponse(req, 'ping', 'pong') );
 });
 
 // API list endpoints
