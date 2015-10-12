@@ -1,5 +1,6 @@
 var _ = require('lodash');
 var Sequelize = require('sequelize');
+var uuid = require('node-uuid');
 var core = app_require('nlc/core');
 
 var ORM = function(){
@@ -14,7 +15,7 @@ var ORM = function(){
 	 * @return {this}
 	 */
 	this.init = function(){
-		this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs');
+		this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs',{logging: false});
 		return this;
 	};
 
@@ -92,6 +93,27 @@ var ORM = function(){
 
 						sequelizeFieldOptions[optionName] = optionValue;
 						break;
+					case 'defaultValue':
+						if( optionValue instanceof Object){
+							var generator;
+							if( (optionValue['generator'] !== undefined) && (generator = optionValue['generator']) ){
+								// TODO : Add generator classes/methods somewhere
+								switch(generator){
+									case 'uuid':
+										optionValue = function(){
+											var data = uuid.v1();
+											// 58e0a7d7-eebc-11d8-9669-0800200c9a66 => 11d8eebc58e0a7d796690800200c9a66
+											var parts = data.split('-');
+											data = parts[2]+parts[1]+parts[0]+parts[3]+parts[4];
+											// console.log(data);
+											return data;
+										};
+										break;
+									default: 
+										throw 'Not a valid generator given in defaultValue';
+								}								
+							}
+						}
 					default:
 						sequelizeFieldOptions[optionName] = optionValue;
 						break;

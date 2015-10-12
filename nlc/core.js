@@ -30,6 +30,7 @@ var Core = function(){
 			request: {
 				type: type,
 				params: req.params,
+				post: req.body
 			},
 			response: this.buildResponseObject(responseContent)
 		};

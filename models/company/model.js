@@ -1,7 +1,8 @@
 var Company = {
 	id:{
-		type: 'UUID',
-		primaryKey: true
+		type: 'STRING(32,1)',
+		primaryKey: true,
+		defaultValue: {generator: 'uuid'}
 	},
 	name:{
 		type: 'VARCHAR(128)',

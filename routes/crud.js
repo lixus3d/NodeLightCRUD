@@ -83,7 +83,18 @@ function CRUDRead(req, res, next){
 }
 
 function CRUDCreate(req, res, next){
+	var model,
+		dao,
+		modelType
+		;
 
+	modelType = core.getModelType(req);
+	dao = factory.getDao(modelType);
+
+	model = dao.create(req.body).then(function(object){
+		var model = object;
+		res.json( core.buildApiResponse(req, 'create', model) );
+	}).catch(next);	
 }
 
 function CRUDUpdate(req, res, next){
