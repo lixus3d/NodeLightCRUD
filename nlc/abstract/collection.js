@@ -1,19 +1,29 @@
-var AbstractModel = app_require('nlc/abstract/model');
-
-var AbstractCollection = function(modelName){
+var AbstractCollection = function(modelName, factory){
 	this.modelName = modelName;
+	if(factory){
+		this.setFactory(factory);
+	}
 	this.objectList = [];
 	this.limit = 0;
 	this.offset = 0;
 	this.total = 0;
 };
 
+AbstractCollection.prototype.setFactory = function(factory){
+	this._factory = factory;
+	return this;
+};
+
 AbstractCollection.prototype.getFactory = function(){
-	return app_require('nlc/factory');
+	return this._factory;
 };
 
 AbstractCollection.prototype.getModel = function(row){
 	return this.getFactory().getModel(this.modelName).load(row);
+};
+
+AbstractCollection.prototype.getModelClass = function(row){
+	return this.getFactory().buildModel(this.modelName);
 };
 
 AbstractCollection.prototype.setLimit = function(limit){
@@ -49,8 +59,9 @@ AbstractCollection.prototype.load = function(objectList){
 	var self = this;
 
 	if( objectList instanceof Array){
+		var ModelClass = this.getModelClass();
 		objectList.forEach(function(row,k){
-			if( !(row instanceof AbstractModel) ){
+			if( !(row instanceof ModelClass) ){
 				objectList[k] = self.getModel(row);
 			}
 		});

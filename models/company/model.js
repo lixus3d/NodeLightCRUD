@@ -1,7 +1,8 @@
 var Company = {
 	getTitle: function(){
 		return this.name + ' ('+this.size+')';
-	},
+	}
+	/*
 	getAddresses: function(){
 		var self = this;
 
@@ -21,6 +22,7 @@ var Company = {
 
 		return p;
 	}
+	*/
 };
 
 module.exports = Company;

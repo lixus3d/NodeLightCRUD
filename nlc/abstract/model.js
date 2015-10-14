@@ -1,7 +1,10 @@
 var _ = require('lodash');
 
-var AbstractModel = function(modelName){
+var AbstractModel = function(modelName, factory){
 	this.modelName = modelName;
+	if(factory){
+		this.setFactory(factory);
+	}
 	this.object = null;
 
 	this.init();
@@ -18,8 +21,13 @@ AbstractModel.prototype.init = function(){
 	});
 };
 
+AbstractModel.prototype.setFactory = function(factory){
+	this._factory = factory;
+	return this;
+};
+
 AbstractModel.prototype.getFactory = function(){
-	return app_require('nlc/factory');
+	return this._factory;
 };
 
 AbstractModel.prototype.getModelFields = function(row){

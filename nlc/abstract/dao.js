@@ -1,9 +1,17 @@
-var AbstractDao = function(modelName){
+var AbstractDao = function(modelName, factory){
 	this.modelName = modelName;
+	if(factory){
+		this.setFactory(factory);
+	}
+};
+
+AbstractDao.prototype.setFactory = function(factory){
+	this._factory = factory;
+	return this;
 };
 
 AbstractDao.prototype.getFactory = function(){
-	return app_require('nlc/factory');
+	return this._factory;
 };
 
 AbstractDao.prototype.getCollection = function(rows){
@@ -15,52 +23,35 @@ AbstractDao.prototype.getModel = function(row){
 };
 
 AbstractDao.prototype.findById = function(){
-	var args = arguments;
-	var self = this;
-	var p = new Promise(function(resolve,reject){
-		self.sequelize.findById.apply(self.sequelize,args).then(function(result){
-			if( result ){
-				var instance = self.getModel(result);
-				resolve(instance);
-			}else{
-				resolve(null);
-			}
-		}).catch(reject);
-	});
-	return p;
+	return this.sequelizeCall('findById',arguments,this.rowToModel.bind(this));
 };
 
 AbstractDao.prototype.findAndCountAll = function(){
-	var args = arguments;
-	var self = this;
-	var p = new Promise(function(resolve,reject){
-		self.sequelize.findAndCountAll.apply(self.sequelize,args).then(function(result){
-			var collection = self.getCollection(result.rows)
-									.setTotal(result.count)
-									;
-			resolve(collection);
-		}).catch(reject);
-	});
-	return p;
+	return this.sequelizeCall('findAndCountAll',arguments,this.resultToCollection.bind(this));
 };
 
 AbstractDao.prototype.create = function(){
-	var args = arguments;
-	var self = this;
-	var p = new Promise(function(resolve,reject){
-		self.sequelize.create.apply(self.sequelize,args).then(function(result){
-			if( result ){
-				var instance = self.getModel(result);
-				resolve(instance);
-			}else{
-				resolve(null);
-			}
-		}).catch(reject);
-	});
-	return p;
+	return this.sequelizeCall('create',arguments,this.rowToModel.bind(this));
 };
 
+AbstractDao.prototype.rowToModel = function(row){
+	if(row){
+		return this.getModel(row);
+	}else{
+		return null;
+	}
+};
 
+AbstractDao.prototype.resultToCollection = function(result){
+	var collection = this.getCollection(result.rows)
+							.setTotal(result.count)
+							;
+	return collection;
+};
+
+AbstractDao.prototype.sequelizeCall = function(method, args, resolveCallback){
+	return this.sequelize[method].apply(this.sequelize,args).then(resolveCallback);
+};
 
 var wrappedMethods = [
 	'sync',

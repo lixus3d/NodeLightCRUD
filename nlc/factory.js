@@ -108,57 +108,66 @@ Factory.prototype.buildModelFields = function(modelName){
 };
 
 Factory.prototype.buildBusiness = function(modelName){
-	var objectConfig = this.getModelObjectConfig(modelName, 'business');
+	if(this.BUSINESS[modelName]===undefined){
+		var factory = this;
+		var objectConfig = this.getModelObjectConfig(modelName, 'business');
 
-	this.BUSINESS[modelName] = function(){
-		AbstractBusiness.call(this,modelName);
-	};
+		this.BUSINESS[modelName] = function(){
+			AbstractBusiness.call(this,modelName,factory);
+		};
 
-	objectConfig.constructor = this.BUSINESS[modelName];
-	this.BUSINESS[modelName].prototype = _.create(AbstractBusiness.prototype,objectConfig);
+		objectConfig.constructor = this.BUSINESS[modelName];
+		this.BUSINESS[modelName].prototype = _.create(AbstractBusiness.prototype,objectConfig);
+	}
 
 	return this.BUSINESS[modelName];
 };
 
 Factory.prototype.buildDao = function(modelName){
-	var objectConfig = this.getModelObjectConfig(modelName, 'dao');
-	var modelFields = this.getModelFields(modelName);
-	modelFields = sequelizeConverter.convertConfigToSequelize(modelFields);
+	if(this.DAO[modelName]===undefined){
+		var factory = this;
+		var objectConfig = this.getModelObjectConfig(modelName, 'dao');
+		var modelFields = this.getModelFields(modelName);
+		modelFields = sequelizeConverter.convertConfigToSequelize(modelFields);
 
-	this.DAO[modelName] = function(){
-		AbstractDao.call(this,modelName);
-	};
+		this.DAO[modelName] = function(){
+			AbstractDao.call(this,modelName,factory);
+		};
 
-	objectConfig.constructor = this.DAO[modelName];
-	objectConfig.sequelize = orm.sequelize.define(modelName,modelFields,{freezeTableName: true});
-	this.DAO[modelName].prototype = _.create(AbstractDao.prototype,objectConfig);
-
+		objectConfig.constructor = this.DAO[modelName];
+		objectConfig.sequelize = orm.sequelize.define(modelName,modelFields,{freezeTableName: true});
+		this.DAO[modelName].prototype = _.create(AbstractDao.prototype,objectConfig);
+	}
 	return this.DAO[modelName];
 };
 
 Factory.prototype.buildCollection = function(modelName){
-	var objectConfig = this.getModelObjectConfig(modelName, 'collection');
+	if(this.COLLECTION[modelName]===undefined){
+		var factory = this;
+		var objectConfig = this.getModelObjectConfig(modelName, 'collection');
 
-	this.COLLECTION[modelName] = function(){
-		AbstractCollection.call(this,modelName);
-	};
+		this.COLLECTION[modelName] = function(){
+			AbstractCollection.call(this,modelName,factory);
+		};
 
-	objectConfig.constructor = this.COLLECTION[modelName];
-	this.COLLECTION[modelName].prototype = _.create(AbstractCollection.prototype,objectConfig);
-
+		objectConfig.constructor = this.COLLECTION[modelName];
+		this.COLLECTION[modelName].prototype = _.create(AbstractCollection.prototype,objectConfig);
+	}
 	return this.COLLECTION[modelName];
 };
 
 Factory.prototype.buildModel = function(modelName){
-	var objectConfig = this.getModelObjectConfig(modelName, 'model');
+	if(this.MODEL[modelName]===undefined){
+		var factory = this;
+		var objectConfig = this.getModelObjectConfig(modelName, 'model');
 
-	this.MODEL[modelName] = function(){
-		AbstractModel.call(this,modelName);
-	};
+		this.MODEL[modelName] = function(){
+			AbstractModel.call(this,modelName,factory);
+		};
 
-	objectConfig.constructor = this.MODEL[modelName];
-	this.MODEL[modelName].prototype = _.create(AbstractModel.prototype,objectConfig);
-
+		objectConfig.constructor = this.MODEL[modelName];
+		this.MODEL[modelName].prototype = _.create(AbstractModel.prototype,objectConfig);
+	}
 	return this.MODEL[modelName];
 };
 
