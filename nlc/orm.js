@@ -1,5 +1,7 @@
 var _ = require('lodash');
 var Sequelize = require('sequelize');
+var SequelizeUtils = require('sequelize/lib/utils');
+var DataTypes = require('sequelize/lib/data-types');
 var uuid = require('node-uuid');
 var core = app_require('nlc/core');
 
@@ -15,8 +17,38 @@ var ORM = function(){
 	 * @return {this}
 	 */
 	this.init = function(){
-		this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs',{logging: false});
+		this.initCustomDataTypes(Sequelize);
+		this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs',{logging: console.log});
 		return this;
+	};
+
+	this.initCustomDataTypes = function(){
+		var BINARY = function(length){
+			var options = typeof length === 'object' && length || {
+				length: length
+			};
+
+			if (!(this instanceof BINARY)) return new BINARY(options);
+
+			this.options = options;
+  			this._binary = true;
+			this._length = options.length || 32;
+		};
+		SequelizeUtils.inherit(BINARY,DataTypes.ABSTRACT);
+
+		BINARY.prototype.dialectTypes = '';
+		BINARY.prototype.key = BINARY.key = 'BINARY';
+		BINARY.prototype.toSql = function() {
+			return 'BINARY(' + this._length + ')';
+		};
+		BINARY.prototype.validate = function(value) {
+			// TODO : Validate
+			return true;
+		};
+		BINARY.prototype.setter = function(value){
+			this.setDataValue('id',new Buffer(val,'hex'));
+		};
+		Sequelize.BINARY = BINARY;
 	};
 
 	/**
@@ -54,75 +86,6 @@ var ORM = function(){
 		return this.sequelize.define(modelName,modelConfig,{freezeTableName: true});
 	};
 
-	/**
-	 * Convert a modelConfig Object to a sequelize configuration object passed to sequelize.define
-	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
-	 * @param  {Object} modelConfig A model config to convert
-	 * @return {Object}
-	 */
-	this.convertConfigToSequelize = function(modelConfig){
-		var sequelizeConfig = {};
-		// TODO : Use a converter object and cut this into functions
-		_.forEach(modelConfig,function(fieldOptions,fieldName){
-			var sequelizeFieldOptions = {};
-			_.forEach(fieldOptions,function(optionValue,optionName){
-				switch(optionName){
-					case 'type':
-						var res;
-						var functionRegex = /^([a-z]+)(\(([0-9,]+)\))?$/gi;
-
-						if(optionValue.match(/^(VARCHAR|STRING)$/g)){
-							optionValue = Sequelize.STRING;
-						}else if( (res = functionRegex.exec(optionValue))!==null ) {
-							var type = res[1].toUpperCase();
-							if(type === 'VARCHAR'){
-								type = 'STRING';
-							}
-							var typeParam = null;
-							if( res[2] !== undefined ){
-								typeParam = res[3].split(',');
-							}
-							if(typeParam===null){
-								optionValue = Sequelize[type];
-							}else{
-								optionValue = Sequelize[type].apply(Sequelize,typeParam);
-							}
-						}else{
-							throw 'Invalid model option';
-						}
-
-						sequelizeFieldOptions[optionName] = optionValue;
-						break;
-					case 'defaultValue':
-						if( optionValue instanceof Object){
-							var generator;
-							if( (optionValue['generator'] !== undefined) && (generator = optionValue['generator']) ){
-								// TODO : Add generator classes/methods somewhere
-								switch(generator){
-									case 'uuid':
-										optionValue = function(){
-											var data = uuid.v1();
-											// 58e0a7d7-eebc-11d8-9669-0800200c9a66 => 11d8eebc58e0a7d796690800200c9a66
-											var parts = data.split('-');
-											data = parts[2]+parts[1]+parts[0]+parts[3]+parts[4];
-											// console.log(data);
-											return data;
-										};
-										break;
-									default: 
-										throw 'Not a valid generator given in defaultValue';
-								}								
-							}
-						}
-					default:
-						sequelizeFieldOptions[optionName] = optionValue;
-						break;
-				}
-			});
-			sequelizeConfig[fieldName] = sequelizeFieldOptions;
-		});
-		return sequelizeConfig;
-	};
 
 	/**
 	 * Overload a Sequelize Model to manipulate

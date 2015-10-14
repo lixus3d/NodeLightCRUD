@@ -1,16 +1,13 @@
-var _ = require('lodash');
-var AbstractCollection = app_require('nlc/abstract/collection');
-
-var CollectionCompany = function(){
-	AbstractCollection.call(this);
-
-	this.getName = function(){
-		return 'CollectionCompany';
-	};
+var CompanyCollection = {
+	getTotalSize: function(){
+		var size = 0;
+		this.each(function(company){
+			if(company.size > 0){
+				size += company.size;
+			}
+		});
+		return size;
+	}
 };
 
-CollectionCompany.prototype = _.create(AbstractCollection.prototype,{
-	constructor: CollectionCompany
-});
-
-module.exports = CollectionCompany;
+module.exports = CompanyCollection;

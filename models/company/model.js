@@ -1,44 +1,26 @@
 var Company = {
-	id:{
-		type: 'STRING(32,1)',
-		primaryKey: true,
-		defaultValue: {generator: 'uuid'}
+	getTitle: function(){
+		return this.name + ' ('+this.size+')';
 	},
-	name:{
-		type: 'VARCHAR(128)',
+	getAddresses: function(){
+		var self = this;
+
+		var factory = this.getFactory();
+		var daoAddress = factory.getDao('address');
+
+		var p = factory.newPromise(function(resolve, reject){
+			if( self.addresses === undefined){
+				daoAddress.findAndCountAll({where: {company_id: this.id}}).then(function(addressesCollection){
+					self.addresses = addressesCollection;
+					resolve(addressesCollection);
+				}).catch(reject);
+			}else{
+				resolve(self.addresses);
+			}
+		});
+
+		return p;
 	}
 };
-
-// ABSTRACT: ABSTRACT,
-// STRING: STRING,
-// CHAR: CHAR,
-// TEXT: TEXT,
-// NUMBER: NUMBER,
-// INTEGER: INTEGER,
-// BIGINT: BIGINT,
-// FLOAT: FLOAT,
-// TIME: TIME,
-// DATE: DATE,
-// DATEONLY: DATEONLY,
-// BOOLEAN: BOOLEAN,
-// NOW: NOW,
-// BLOB: BLOB,
-// DECIMAL: DECIMAL,
-// NUMERIC: DECIMAL,
-// UUID: UUID,
-// UUIDV1: UUIDV1,
-// UUIDV4: UUIDV4,
-// HSTORE: HSTORE,
-// JSON: JSONTYPE,
-// JSONB: JSONB,
-// VIRTUAL: VIRTUAL,
-// ARRAY: ARRAY,
-// NONE: VIRTUAL,
-// ENUM: ENUM,
-// RANGE: RANGE,
-// REAL: REAL,
-// DOUBLE: DOUBLE,
-// 'DOUBLE PRECISION': DOUBLE,
-// GEOMETRY: GEOMETRY
 
 module.exports = Company;

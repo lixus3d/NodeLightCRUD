@@ -1,4 +1,4 @@
-var orm = app_require('nlc/orm');
-var Model = orm.buildModel('company');
+var CompanyDao = {
+};
 
-module.exports = Model;
+module.exports = CompanyDao;

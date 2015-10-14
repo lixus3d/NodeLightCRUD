@@ -1,6 +1,7 @@
 var _ = require('lodash');
 var modelList = app_require('models');
 var AbstractCollection = app_require('nlc/abstract/collection');
+var AbstractModel = app_require('nlc/abstract/model');
 
 var Core = function(){
 
@@ -8,7 +9,7 @@ var Core = function(){
 
 
 	/**
-	 * Return the model type of a request
+	 * Return the model type of a request, from the request base url
 	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
 	 * @param  {Request} req Express request object instance
 	 * @return string The Model name
@@ -18,6 +19,12 @@ var Core = function(){
 		return this.convertPlural(modelTypePlural);
 	};
 
+	/**
+	 * Convert a plural name in the url to the model name
+	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+	 * @param  {String} modelTypePlural The plural name of the model
+	 * @return {String} The model name
+	 */
 	this.convertPlural = function(modelTypePlural){
 		if(modelList[modelTypePlural]!==undefined){
 			return modelList[modelTypePlural];
@@ -25,6 +32,26 @@ var Core = function(){
 		throw 'Invalid modelTypePlural given';
 	};
 
+	/**
+	 * Convert a string to a buffer, usually for binary data like id
+	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+	 * @param  {String} el         The string representation of the binary data
+	 * @param  {String} bufferType The encoding type
+	 * @return {Buffer}            A node Buffer representing the binary data
+	 */
+	this.convertToBuffer = function(el,bufferType){
+		bufferType = bufferType || 'hex';
+		return new Buffer(el,bufferType);
+	};
+
+	/**
+	 * Build an API response Object
+	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+	 * @param  {Request} req            The request object of the current call
+	 * @param  {String} type            The type of request
+	 * @param  {mixed} responseContent  The response content to put in the response object
+	 * @return {Object}
+	 */
 	this.buildApiResponse = function(req, type, responseContent){
 		var apiResponse = {
 			request: {
@@ -38,63 +65,50 @@ var Core = function(){
 	};
 
 	/**
-	 * Convert a response to an object form acceptable in the API
+	 * Convert a response to a conventional object acceptable in the API
 	 * @author Emmanuel Gauthier <emmanuel@mobistep.com>
 	 * @param  {mixed} responseReturn A return
 	 * @return {Object}
 	 */
 	this.buildResponseObject = function(responseContent){
 		switch(true){
-			// TODO : Might create a interface for response, that implements a exportForAPI() , building the complete response object
-
+			// TODO : Might create an interface for response object, that implements a exportForAPI() , building the complete response object
 			case responseContent instanceof AbstractCollection:
 				var collection = responseContent;
 				return {
 					type: 'collection',
 					params: {
-						type: collection.getName(),
+						model: collection.modelName,
 						length: collection.getLength(),
 						offset: collection.getOffset(),
+						limit: collection.getLimit(),
 						total: collection.getTotal()
 					},
-					collection: responseContent.export()
+					collection: responseContent
 				};
-			case responseContent instanceof Object:
-				return {
-					type: 'model',
-					model: responseContent
-				};
-			/*
-			case responseContent instanceof NLC.Collection:
-
-				var collection = responseContent;
-				return {
-					type: 'collection',
-					// TODO : Might replace with a collection.exportParams()
-					params: {
-						type: collection.getName(),
-						length: collection.length,
-						offset: collection.offset,
-						total: collection.total
-					},
-					collection: collection.export()
-				};
-
-			case responseContent instanceof NLC.Model:
+			case responseContent instanceof AbstractModel:
 				var model = responseContent;
 				return {
 					type: 'model',
 					params: {
-						type: model.getName(),
-						complete: model.isComplete()
+						type: model.modelName
 					},
-					model: model.export()
+					model: model
 				};
-			*/
+			case responseContent instanceof Object:
+				return {
+					type: 'object',
+					object: responseContent
+				};
 			case typeof responseContent === 'string':
 				return {
 					type: 'string',
 					string: responseContent
+				};
+			default:
+				return {
+					type: 'unknown',
+					unknown: responseContent
 				};
 		}
 		return {};

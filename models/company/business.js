@@ -1,12 +1,4 @@
-var _ = require('lodash');
-var AbstractBusiness = app_require('nlc/abstract/business');
-
-var Business = function(){
-	AbstractBusiness.call(this);
+var CompanyBusiness = {
 };
 
-Business.prototype = _.create(AbstractBusiness.prototype,{
-	constructor: Business,
-});
-
-module.exports = new Business();
+module.exports = CompanyBusiness;
