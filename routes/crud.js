@@ -76,9 +76,15 @@ function getDao(req){
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
  */
 function createTable(req, res, next){
-	getDao(req).sync({force: true}).then(function(){
-		res.json( core.buildApiResponse(req, 'create-table', 'OK') );
-	}).catch(next);
+	getDao(req)
+		.then(function(dao){
+			return dao.sync({force: true});
+		})
+		.then(function(){
+			res.json( core.buildApiResponse(req, 'create-table', 'OK') );
+		})
+		.catch(next)
+		;
 }
 
 /**
@@ -87,23 +93,26 @@ function createTable(req, res, next){
  */
 function CRUDReadList(req, res, next){
 	var collection,
-		modelType,
 		offset,
 		limit
 		;
 
-	modelType = core.getModelType(req);
-
 	offset = parseInt(getQuery(req,'offset',0),10);
 	limit = parseInt(getQuery(req,'limit',100),10);
 
-	getDao(req).findAndCountAll({offset: offset, limit: limit}).then(function(collection){
-		collection
-			.setOffset(offset)
-			.setLimit(limit)
-			;
-		res.json( core.buildApiResponse(req, 'read-list', collection) );
-	}).catch(next);
+	getDao(req)
+		.then(function(dao){
+			return dao.findAndCountAll({offset: offset, limit: limit});
+		})
+		.then(function(collection){
+			collection
+				.setOffset(offset)
+				.setLimit(limit)
+				;
+			res.json( core.buildApiResponse(req, 'read-list', collection) );
+		})
+		.catch(next)
+		;
 }
 
 /**
@@ -111,21 +120,21 @@ function CRUDReadList(req, res, next){
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
  */
 function CRUDRead(req, res, next){
-	var model,
-		dao,
-		modelType,
-		id
-		;
+	var id;
 
 	id = getParam(req,'id');
 
-	modelType = core.getModelType(req);
-
-	getDao(req).findById(id).then(function(model){
-		if( model ){
-			res.json( core.buildApiResponse(req, 'read-by-id', model) );
-		}else throw 'Ressource not found';
-	}).catch(next);
+	getDao(req)
+		.then(function(dao){
+			return dao.findById(id);
+		})
+		.then(function(model){
+			if( model ){
+				res.json( core.buildApiResponse(req, 'read-by-id', model) );
+			}else throw 'Ressource not found';
+		})
+		.catch(next)
+		;
 }
 
 /**
@@ -134,12 +143,15 @@ function CRUDRead(req, res, next){
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
  */
 function CRUDCreate(req, res, next){
-	var model;
-
-	getDao(req).create(req.body).then(function(object){
-		var model = object;
-		res.json( core.buildApiResponse(req, 'create', model) );
-	}).catch(next);
+	getDao(req)
+		.then(function(dao){
+			return dao.create(req.body);
+		})
+		.then(function(model){
+			res.json( core.buildApiResponse(req, 'create', model) );
+		})
+		.catch(next)
+		;
 }
 
 /**
@@ -154,13 +166,21 @@ function CRUDUpdate(req, res, next){
 
 	id = getParam(req,'id');
 
-	getDao(req).findById(id).then(function(model){
-		if(model){
-			model.update(req.body).then(function(){
-				res.json( core.buildApiResponse(req, 'update', model) );
-			}).catch(next);
-		}else throw 'Ressource not found';
-	}).catch(next);
+	getDao(req)
+		.then(function(dao){
+			return dao.findById(id);
+		})
+		.then(function(model){
+			return model.update(req.body);
+		})
+		.catch(function(){
+			throw 'Ressource not found';
+		})
+		.then(function(model){
+			res.json( core.buildApiResponse(req, 'update', model) );
+		})
+		.catch(next)
+		;
 }
 
 /**
@@ -174,13 +194,22 @@ function CRUDDelete(req, res, next){
 
 	id = getParam(req,'id');
 
-	getDao(req).findById(id).then(function(model){
-		if(model){
-			model.destroy().then(function(){
-				res.json( core.buildApiResponse(req, 'delete', model) );
-			}).catch(next);
-		}else throw 'Ressource not found';
-	}).catch(next);
+
+	getDao(req)
+		.then(function(dao){
+			return dao.findById(id);
+		})
+		.then(function(model){
+			return model.destroy(req.body);
+		})
+		.catch(function(){
+			throw 'Ressource not found';
+		})
+		.then(function(model){
+			res.json( core.buildApiResponse(req, 'update', model) );
+		})
+		.catch(next)
+		;
 }
 
 

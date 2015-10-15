@@ -1,3 +1,5 @@
+var Q = require('q');
+
 var AbstractDao = function(modelName, factory){
 	this.modelName = modelName;
 	if(factory){
@@ -15,11 +17,11 @@ AbstractDao.prototype.getFactory = function(){
 };
 
 AbstractDao.prototype.getCollection = function(rows){
-	return this.getFactory().getCollection(this.modelName).load(rows);
+	return this.getFactory().getCollection(this.modelName).then(function(collection){ return collection.load(rows); });
 };
 
 AbstractDao.prototype.getModel = function(row){
-	return this.getFactory().getModel(this.modelName).load(row);
+	return this.getFactory().getModel(this.modelName).then(function(model){ return model.load(row); });
 };
 
 AbstractDao.prototype.findById = function(){
@@ -35,18 +37,19 @@ AbstractDao.prototype.create = function(){
 };
 
 AbstractDao.prototype.rowToModel = function(row){
+	var deferred = Q.defer();
 	if(row){
-		return this.getModel(row);
+		this.getModel(row).then(deferred.resolve);
 	}else{
-		return null;
+		deferred.resolve(null);
 	}
+	return deferred.promise;
 };
 
 AbstractDao.prototype.resultToCollection = function(result){
-	var collection = this.getCollection(result.rows)
-							.setTotal(result.count)
-							;
-	return collection;
+	return this.getCollection(result.rows).then(function(collection){
+		return collection.setTotal(result.count);
+	});
 };
 
 AbstractDao.prototype.sequelizeCall = function(method, args, resolveCallback){

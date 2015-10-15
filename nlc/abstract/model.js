@@ -30,7 +30,7 @@ AbstractModel.prototype.getFactory = function(){
 	return this._factory;
 };
 
-AbstractModel.prototype.getModelFields = function(row){
+AbstractModel.prototype.getModelFields = function(){
 	return this.getFactory().getModelFields(this.modelName);
 };
 
@@ -61,7 +61,8 @@ var wrappedMethods = [
 
 wrappedMethods.forEach(function(method){
 	AbstractModel.prototype[method] = function(){
-		return this.object[method].apply(this.object,arguments);
+		var self = this;
+		return this.object[method].apply(this.object,arguments).then(function(){ return self; });
 	};
 });
 

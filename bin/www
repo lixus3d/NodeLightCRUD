@@ -8,6 +8,8 @@ var app = require('../app');
 var debug = require('debug')('NodeLightCRUD:server');
 var http = require('http');
 var cluster = require('cluster');
+var Q = require('q');
+Q.longStackSupport = true;
 
 /**
  * Get port from environment and store in Express.

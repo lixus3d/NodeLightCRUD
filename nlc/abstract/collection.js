@@ -19,11 +19,12 @@ AbstractCollection.prototype.getFactory = function(){
 };
 
 AbstractCollection.prototype.getModel = function(row){
-	return this.getFactory().getModel(this.modelName).load(row);
+	return (new this._modelClass()).load(row);
 };
 
-AbstractCollection.prototype.getModelClass = function(row){
-	return this.getFactory().buildModel(this.modelName);
+AbstractCollection.prototype.getModelClass = function(){
+	// Must be defined in the prototype of the "final" class
+	return this._modelClass;
 };
 
 AbstractCollection.prototype.setLimit = function(limit){

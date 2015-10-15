@@ -1,21 +1,34 @@
 var _ = require('lodash');
-var sequelizeConverter = app_require('nlc/converter/sequelize');
-var orm = app_require('nlc/orm');
-var AbstractModel = app_require('nlc/abstract/model');
-var AbstractCollection = app_require('nlc/abstract/collection');
-var AbstractDao = app_require('nlc/abstract/dao');
+var Q = require('q');
+
+var Provider = app_require('nlc/provider');
+var Customizer = app_require('nlc/customizer');
 
 var Factory = function(){
 	this._businesses = {};
 	this._daos = {};
-	this._collections = {};
-	this._models = {};
-	this._modelFields = {};
+	this._customizer = new Customizer(this);
+	this._provider = new Provider(this);
 
-	this.MODEL = {};
-	this.BUSINESS = {};
-	this.COLLECTION = {};
-	this.DAO = {};
+	this.classes = {
+		fields: {},
+		model: {},
+		business: {},
+		collection: {},
+		dao: {},
+	};
+};
+
+/**
+ * Return the abstract class to use for a particular objectType
+ * This method use the Provider to get the abstract class
+ * Note : Usually the classes are AbstractCollection, AbstractDao, etc...
+ * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+ * @param  {String} objectType The object type you want the abstract class
+ * @return {mixed}
+ */
+Factory.prototype.getAbstractClass = function(objectType){
+	return this._provider.getAbstractClass(objectType);
 };
 
 /**
@@ -26,9 +39,14 @@ var Factory = function(){
  */
 Factory.prototype.getBusiness = function(modelName){
 	if(!this._businesses[modelName]){
-		this._businesses[modelName] = new (this.buildBusiness(modelName))();
+		var factory = this;
+		return Q.when(this.buildBusiness(modelName)).then(function(businessClass){
+			factory._businesses[modelName] = new businessClass();
+			return factory._businesses[modelName];
+		});
+	}else{
+		return Q.fcall(this._businesses[modelName]);
 	}
-	return this._businesses[modelName];
 };
 
 /**
@@ -38,10 +56,15 @@ Factory.prototype.getBusiness = function(modelName){
  * @return {AbstractDao}
  */
 Factory.prototype.getDao = function(modelName){
+	var factory = this;
 	if(!this._daos[modelName]){
-		this._daos[modelName] = new (this.buildDao(modelName))();
+		return Q.when(this.buildDao(modelName)).then(function(daoClass){
+			factory._daos[modelName] = new daoClass();
+			return factory._daos[modelName];
+		});
+	}else{
+		return Q.fcall(function(){return factory._daos[modelName];});
 	}
-	return this._daos[modelName];
 };
 
 /**
@@ -51,10 +74,9 @@ Factory.prototype.getDao = function(modelName){
  * @return {AbstractCollection}
  */
 Factory.prototype.getCollection = function(modelName){
-	if(!this._collections[modelName]){
-		this._collections[modelName] = this.buildCollection(modelName);
-	}
-	return new this._collections[modelName]();
+	return Q.when(this.buildCollection(modelName)).then(function(collectionClass){
+		return new collectionClass();
+	});
 };
 
 /**
@@ -64,10 +86,9 @@ Factory.prototype.getCollection = function(modelName){
  * @return {AbstractModel}
  */
 Factory.prototype.getModel = function(modelName){
-	if(!this._models[modelName]){
-		this._models[modelName] = this.buildModel(modelName);
-	}
-	return new this._models[modelName]();
+	return Q.when(this.buildModel(modelName)).then(function(modelClass){
+		return new modelClass();
+	});
 };
 
 /**
@@ -77,10 +98,9 @@ Factory.prototype.getModel = function(modelName){
  * @return {Object}
  */
 Factory.prototype.getModelFields = function(modelName){
-	if(!this._modelFields[modelName]){
-		this._modelFields[modelName] = this.buildModelFields(modelName);
-	}
-	return this._modelFields[modelName];
+	return Q.when(this.buildModelFields(modelName)).then(function(modelFields){
+		return modelFields;
+	});
 };
 
 /**
@@ -91,84 +111,92 @@ Factory.prototype.getModelFields = function(modelName){
  * @param  {String} objectType The name of the model config object type you want for the model
  * @return {Object}
  */
-Factory.prototype.getModelObjectConfig = function(modelName, objectType){
+Factory.prototype.getModelConfigObject = function(modelName, objectType){
+	var deferred = Q.defer();
 	try{
-		return app_require('models/'+modelName+'/'+objectType);
+		var objectConfig = app_require('models/'+modelName+'/'+objectType);
+		deferred.resolve(objectConfig);
 	}catch(e){
 		if(e instanceof Error && e.code === "MODULE_NOT_FOUND"){
-			return {};
+			deferred.resolve({});
 		}
-		throw e;
+		deferred.reject(e);
 	}
+	return deferred.promise;
 };
 
-
+/**
+ * Get the config object for the model fields and store it for futur use
+ * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+ * @param  {String} modelName The model name you want the fields
+ * @return {Promise}
+ */
 Factory.prototype.buildModelFields = function(modelName){
-	return this.getModelObjectConfig(modelName, 'fields');
+	var objectType = 'fields';
+	if(this.classes[objectType][modelName]===undefined){
+		var factory = this;
+		return this.getModelConfigObject(modelName, objectType).then(function(objectConfig){
+			factory.classes[objectType][modelName] = objectConfig;
+			return factory.classes[objectType][modelName];
+		});
+	}
+	return this.classes[objectType][modelName];
 };
 
 Factory.prototype.buildBusiness = function(modelName){
-	if(this.BUSINESS[modelName]===undefined){
-		var factory = this;
-		var objectConfig = this.getModelObjectConfig(modelName, 'business');
-
-		this.BUSINESS[modelName] = function(){
-			AbstractBusiness.call(this,modelName,factory);
-		};
-
-		objectConfig.constructor = this.BUSINESS[modelName];
-		this.BUSINESS[modelName].prototype = _.create(AbstractBusiness.prototype,objectConfig);
-	}
-
-	return this.BUSINESS[modelName];
+	return this.buildObject(modelName,'business');
 };
 
 Factory.prototype.buildDao = function(modelName){
-	if(this.DAO[modelName]===undefined){
-		var factory = this;
-		var objectConfig = this.getModelObjectConfig(modelName, 'dao');
-		var modelFields = this.getModelFields(modelName);
-		modelFields = sequelizeConverter.convertConfigToSequelize(modelFields);
-
-		this.DAO[modelName] = function(){
-			AbstractDao.call(this,modelName,factory);
-		};
-
-		objectConfig.constructor = this.DAO[modelName];
-		objectConfig.sequelize = orm.sequelize.define(modelName,modelFields,{freezeTableName: true});
-		this.DAO[modelName].prototype = _.create(AbstractDao.prototype,objectConfig);
-	}
-	return this.DAO[modelName];
+	return this.buildObject(modelName,'dao');
 };
 
 Factory.prototype.buildCollection = function(modelName){
-	if(this.COLLECTION[modelName]===undefined){
-		var factory = this;
-		var objectConfig = this.getModelObjectConfig(modelName, 'collection');
-
-		this.COLLECTION[modelName] = function(){
-			AbstractCollection.call(this,modelName,factory);
-		};
-
-		objectConfig.constructor = this.COLLECTION[modelName];
-		this.COLLECTION[modelName].prototype = _.create(AbstractCollection.prototype,objectConfig);
-	}
-	return this.COLLECTION[modelName];
+	return this.buildObject(modelName,'collection');
 };
 
 Factory.prototype.buildModel = function(modelName){
-	if(this.MODEL[modelName]===undefined){
+	return this.buildObject(modelName,'model');
+};
+
+/**
+ * Build a class of objectType for modelName dynamically
+ * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+ * @param  {String} modelName  The model name of the class you want to create
+ * @param  {String} objectType The class type of the class you want to create
+ * @return {Promise}
+ */
+Factory.prototype.buildObject = function(modelName, objectType){
+	if(this.classes[objectType][modelName]===undefined){
 		var factory = this;
-		var objectConfig = this.getModelObjectConfig(modelName, 'model');
 
-		this.MODEL[modelName] = function(){
-			AbstractModel.call(this,modelName,factory);
-		};
+		return this.getModelConfigObject(modelName, objectType).then(function(objectConfig){
+			var AbstractClass = factory.getAbstractClass(objectType);
 
-		objectConfig.constructor = this.MODEL[modelName];
-		this.MODEL[modelName].prototype = _.create(AbstractModel.prototype,objectConfig);
+			var ObjectClass = function(){
+				AbstractClass.call(this,modelName,factory);
+			};
+
+			objectConfig.constructor = ObjectClass;
+			ObjectClass.prototype = _.create(AbstractClass.prototype,objectConfig);
+			if(factory._customizer[objectType+'Customize']!==undefined){
+				return factory._customizer[objectType+'Customize'](modelName, ObjectClass).then(function(ObjectClass){
+					return factory.assignObjectClass(modelName, objectType, ObjectClass);
+				});
+			}else{
+				return factory.assignObjectClass(modelName, objectType, ObjectClass);
+			}
+		});
 	}
-	return this.MODEL[modelName];
+	return this.classes[objectType][modelName];
+};
+
+/**
+ * Store an ObjectClass for future use
+ * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+ */
+Factory.prototype.assignObjectClass = function(modelName, objectType, ObjectClass){
+	return (this.classes[objectType][modelName] = ObjectClass);
 };
 
 module.exports = new Factory();
