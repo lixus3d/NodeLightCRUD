@@ -1,10 +1,8 @@
-var Q = require('q');
+var $promise = require('bluebird');
 
 var AbstractDao = function(modelName, factory){
 	this.modelName = modelName;
-	if(factory){
-		this.setFactory(factory);
-	}
+	this.setFactory(factory);
 };
 
 AbstractDao.prototype.setFactory = function(factory){
@@ -37,13 +35,11 @@ AbstractDao.prototype.create = function(){
 };
 
 AbstractDao.prototype.rowToModel = function(row){
-	var deferred = Q.defer();
 	if(row){
-		this.getModel(row).then(deferred.resolve);
+		return this.getModel(row);
 	}else{
-		deferred.resolve(null);
+		return null;
 	}
-	return deferred.promise;
 };
 
 AbstractDao.prototype.resultToCollection = function(result){

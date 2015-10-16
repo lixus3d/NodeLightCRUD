@@ -1,8 +1,6 @@
 var AbstractCollection = function(modelName, factory){
 	this.modelName = modelName;
-	if(factory){
-		this.setFactory(factory);
-	}
+	this.setFactory(factory);
 	this.objectList = [];
 	this.limit = 0;
 	this.offset = 0;

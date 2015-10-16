@@ -2,9 +2,7 @@ var _ = require('lodash');
 
 var AbstractModel = function(modelName, factory){
 	this.modelName = modelName;
-	if(factory){
-		this.setFactory(factory);
-	}
+	this.setFactory(factory);
 	this.object = null;
 
 	this.init();
@@ -12,8 +10,7 @@ var AbstractModel = function(modelName, factory){
 
 AbstractModel.prototype.init = function(){
 	var self = this;
-	var modelFields = this.getModelFields();
-	_.each(modelFields,function(attribute,name){
+	_.each(this.getModelFields(),function(attribute,name){
 		Object.defineProperty(self, name, {
 		  get: function() { return this.object[name]; },
 		  set: function(val){ return (this.object[name] = val); }
@@ -31,7 +28,7 @@ AbstractModel.prototype.getFactory = function(){
 };
 
 AbstractModel.prototype.getModelFields = function(){
-	return this.getFactory().getModelFields(this.modelName);
+	return this._modelFields;
 };
 
 AbstractModel.prototype.load = function(row){

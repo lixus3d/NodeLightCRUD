@@ -1,14 +1,18 @@
 var _ = require('lodash');
-var Q = require('q');
+var $promise = require('bluebird');
 
 var Provider = app_require('nlc/provider');
 var Customizer = app_require('nlc/customizer');
 
 var Factory = function(){
-	this._businesses = {};
-	this._daos = {};
 	this._customizer = new Customizer(this);
 	this._provider = new Provider(this);
+	
+	this._businesses = {};
+	this._daos = {};
+	this._models = {};
+	this._collections = {};
+	this._modelFields = {};
 
 	this.classes = {
 		fields: {},
@@ -38,14 +42,11 @@ Factory.prototype.getAbstractClass = function(objectType){
  * @return {AbstractBusiness}
  */
 Factory.prototype.getBusiness = function(modelName){
-	if(!this._businesses[modelName]){
-		var factory = this;
-		return Q.when(this.buildBusiness(modelName)).then(function(businessClass){
-			factory._businesses[modelName] = new businessClass();
-			return factory._businesses[modelName];
-		});
-	}else{
-		return Q.fcall(this._businesses[modelName]);
+	if(this._businesses[modelName]) return this._businesses[modelName];
+	return ( this._businesses[modelName] = $promise.resolve(this.buildBusiness(modelName)).then(instanciateBusiness) );
+
+	function instanciateBusiness(businessClass){
+		return new businessClass();
 	}
 };
 
@@ -56,17 +57,14 @@ Factory.prototype.getBusiness = function(modelName){
  * @return {AbstractDao}
  */
 Factory.prototype.getDao = function(modelName){
-	var factory = this;
-	if(!this._daos[modelName]){
-		return Q.when(this.buildDao(modelName)).then(function(daoClass){
-			factory._daos[modelName] = new daoClass();
-			return factory._daos[modelName];
-		});
-	}else{
-		return Q.fcall(function(){return factory._daos[modelName];});
+	if(this._daos[modelName]) return this._daos[modelName];
+	return ( this._daos[modelName] = $promise.resolve(this.buildDao(modelName)).then(instanciateDao) );
+
+	function instanciateDao(daoClass){
+		return new daoClass();
 	}
 };
-
+ 
 /**
  * Get a model collection instance
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
@@ -74,9 +72,14 @@ Factory.prototype.getDao = function(modelName){
  * @return {AbstractCollection}
  */
 Factory.prototype.getCollection = function(modelName){
-	return Q.when(this.buildCollection(modelName)).then(function(collectionClass){
+	if(this._collections[modelName] === undefined){ 
+		this._collections[modelName] = $promise.resolve(this.buildCollection(modelName));
+	}
+	return this._collections[modelName].then(instanciateCollection);
+
+	function instanciateCollection(collectionClass){
 		return new collectionClass();
-	});
+	}	
 };
 
 /**
@@ -86,9 +89,15 @@ Factory.prototype.getCollection = function(modelName){
  * @return {AbstractModel}
  */
 Factory.prototype.getModel = function(modelName){
-	return Q.when(this.buildModel(modelName)).then(function(modelClass){
+	if(this._models[modelName] === undefined){ 
+		this._models[modelName] = $promise.resolve(this.buildModel(modelName));
+	}
+	return this._models[modelName].then(instanciateModel);
+
+	function instanciateModel(modelClass){
 		return new modelClass();
-	});
+	}
+
 };
 
 /**
@@ -98,9 +107,8 @@ Factory.prototype.getModel = function(modelName){
  * @return {Object}
  */
 Factory.prototype.getModelFields = function(modelName){
-	return Q.when(this.buildModelFields(modelName)).then(function(modelFields){
-		return modelFields;
-	});
+	if(this._modelFields[modelName]) return this._modelFields[modelName];
+	return ( this._modelFields[modelName] = $promise.resolve(this.buildModelFields(modelName)) );
 };
 
 /**
@@ -112,17 +120,17 @@ Factory.prototype.getModelFields = function(modelName){
  * @return {Object}
  */
 Factory.prototype.getModelConfigObject = function(modelName, objectType){
-	var deferred = Q.defer();
-	try{
-		var objectConfig = app_require('models/'+modelName+'/'+objectType);
-		deferred.resolve(objectConfig);
-	}catch(e){
-		if(e instanceof Error && e.code === "MODULE_NOT_FOUND"){
-			deferred.resolve({});
+	return new $promise(function(resolve,reject){
+		try{
+			var objectConfig = app_require('models/'+modelName+'/'+objectType);
+			resolve(objectConfig);
+		}catch(e){
+			if(e instanceof Error && e.code === "MODULE_NOT_FOUND"){
+				resolve({});
+			}
+			reject(e);
 		}
-		deferred.reject(e);
-	}
-	return deferred.promise;
+	});
 };
 
 /**

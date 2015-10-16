@@ -1,8 +1,7 @@
 
-var Q = require('q');
-
 var daoCustomizer = app_require('nlc/customizer/dao');
 var collectionCustomizer = app_require('nlc/customizer/collection');
+var modelCustomizer = app_require('nlc/customizer/model');
 
 /**
  * Provide the "Final" Object classes customization
@@ -25,7 +24,6 @@ Customizer.prototype.getFactory = function(){
 
 /**
  * Customize the DAO for sequelize
- * Note : Can't be shared with browser
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
  * @param  {String} modelName The model name of this dao class
  * @param  {Function} daoClass  The dao class to customize
@@ -37,7 +35,6 @@ Customizer.prototype.daoCustomize = function(modelName, daoClass){
 
 /**
  * Customize the Collection
- * Note : Can be shared with browser
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
  * @param  {String} modelName The model name of this collection class
  * @param  {Function} daoClass  The collection class to customize
@@ -45,6 +42,17 @@ Customizer.prototype.daoCustomize = function(modelName, daoClass){
  */
 Customizer.prototype.collectionCustomize = function(modelName, collectionClass){
 	return collectionCustomizer(this, modelName, collectionClass);
+};
+
+/**
+ * Customize the Collection
+ * @author Emmanuel Gauthier <emmanuel@mobistep.com>
+ * @param  {String} modelName The model name of this collection class
+ * @param  {Function} daoClass  The collection class to customize
+ * @return {Promise}
+ */
+Customizer.prototype.modelCustomize = function(modelName, modelClass){
+	return modelCustomizer(this, modelName, modelClass);
 };
 
 module.exports = Customizer;

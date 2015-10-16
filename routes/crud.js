@@ -69,10 +69,8 @@ function getQuery(req, paramName, defaultValue){
  */
 function getDao(req){
 	var	modelType = core.getModelType(req);
-	if(_daos[modelType]) return _daos[modelType]; // Return a Promise
-	return factory.getDao(modelType).then(function(dao){
-		return (_daos[modelType] = dao);
-	});
+	if(_daos[modelType]!==undefined) return _daos[modelType]; // Return the Promise if already created
+	return (_daos[modelType] = factory.getDao(modelType));
 }
 
 /**
@@ -131,7 +129,7 @@ function CRUDRead(req, res, next){
 
 	getDao(req)
 		.then(function(dao){
-			return dao.findById(id);
+			return dao.findById(id)			
 		})
 		.then(function(model){
 			if( model ){

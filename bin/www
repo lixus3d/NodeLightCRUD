@@ -4,12 +4,13 @@
  * Module dependencies.
  */
 
+var $promise = require('bluebird');
+// $promise.longStackTraces();
+
 var app = require('../app');
 var debug = require('debug')('NodeLightCRUD:server');
 var http = require('http');
 var cluster = require('cluster');
-var Q = require('q');
-Q.longStackSupport = true;
 
 /**
  * Get port from environment and store in Express.
@@ -20,7 +21,7 @@ var port = normalizePort(process.env.PORT || '3000');
 if( cluster.isMaster ){
 
 	// Count the machine's CPUs
-	var cpuCount = require('os').cpus().length;
+	var cpuCount = require('os').cpus().length+1;
 	while(cpuCount--){
 		cluster.fork();
 	}
