@@ -18,7 +18,8 @@ var ORM = function(){
 	 */
 	this.init = function(){
 		this.initCustomDataTypes(Sequelize);
-		this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs',{logging: console.log});
+		this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs',{logging: false});
+		// this.sequelize = new Sequelize('mysql://nodejs:nodejs@localhost:3306/nodejs',{logging: console.log});
 		return this;
 	};
 

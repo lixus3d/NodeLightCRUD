@@ -1,4 +1,6 @@
 var Q = require('q');
+
+var orm = app_require('nlc/orm');
 var sequelizeConverter = app_require('nlc/converter/sequelize');
 
 module.exports = function(customizer, modelName, daoClass){
