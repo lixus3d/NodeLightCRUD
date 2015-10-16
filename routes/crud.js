@@ -6,6 +6,8 @@ var core = app_require('nlc/core');
 var factory = app_require('nlc/factory');
 var modelList = app_require('models');
 
+var _daos = {};
+
 // Create table
 router.post('/create', createTable);
 // Read list
@@ -63,11 +65,14 @@ function getQuery(req, paramName, defaultValue){
  * A quick function to get directly the dao of the current request model
  * @author Emmanuel Gauthier <emmanuel@mobistep.com>
  * @param  {Request} req The current request object
- * @return {Model}       Sequelize DAO
+ * @return {Promise}
  */
 function getDao(req){
 	var	modelType = core.getModelType(req);
-	return factory.getDao(modelType);
+	if(_daos[modelType]) return _daos[modelType]; // Return a Promise
+	return factory.getDao(modelType).then(function(dao){
+		return (_daos[modelType] = dao);
+	});
 }
 
 /**
